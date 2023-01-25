@@ -1,6 +1,8 @@
 const mongoose=require('mongoose');
 const validator=require('validator');
-const User=mongoose.model('User',{
+const bcrypt=require('bcrypt');
+const jwt=require('jsonwebtoken');
+const userSchema=new mongoose.Schema({
     first_name:{
         type:String,
         required:true
@@ -24,7 +26,6 @@ const User=mongoose.model('User',{
         type:String,
         required:true,
         minlength:7,
-        trim:true,
         validate(value){
             if(value==="password")
                 throw err;
@@ -37,5 +38,19 @@ const User=mongoose.model('User',{
         unique:true
     }
 })
+
+userSchema.methods.generateAuthToken=async function(){
+    const user=this;
+    const token=jwt.sign({_id:user._id.toString()},'keytoaccessuser')
+    return token;
+}
+userSchema.pre('save',async function(next){
+    const user=this;
+    if(user.isModified('password')){
+        user.password=await bcrypt.hash(user.password,8);
+    }
+    next();
+})
+const User=mongoose.model('User',userSchema)
 
 module.exports=User;
